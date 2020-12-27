@@ -11101,6 +11101,7 @@ void hdd_adapter_feature_update_work_deinit(struct hdd_adapter *adapter)
 	hdd_exit();
 }
 
+#ifdef WLAN_DEBUG
 static uint8_t *hdd_tp_level_to_str(uint32_t level)
 {
 	switch (level) {
@@ -11117,6 +11118,7 @@ static uint8_t *hdd_tp_level_to_str(uint32_t level)
 		return "INVAL";
 	}
 }
+#endif
 
 #define HDD_DUMP_STAT_HELP(STAT_ID) \
 	hdd_nofl_debug("%u -- %s", STAT_ID, (# STAT_ID))
@@ -11228,6 +11230,7 @@ int hdd_wlan_clear_stats(struct hdd_adapter *adapter, int stats_id)
 
 void wlan_hdd_display_tx_rx_histogram(struct hdd_context *hdd_ctx)
 {
+#ifdef WLAN_DEBUG
 	int i;
 
 #ifdef WLAN_FEATURE_DP_BUS_BANDWIDTH
@@ -11270,6 +11273,7 @@ void wlan_hdd_display_tx_rx_histogram(struct hdd_context *hdd_ctx)
 				       hist->is_tx_pm_qos_high ? "HIGH" : "LOW");
 		}
 	}
+#endif
 }
 
 /**

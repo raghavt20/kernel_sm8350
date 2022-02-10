@@ -308,6 +308,12 @@ enum touch_state {
 	TOUCH_LOW_POWER_STATE,
 };
 
+#define BRIGHTNESS_ALPHA_PAIR_LEN 2
+struct brightness_alpha_pair {
+	u16 brightness;
+	u8 alpha;
+};
+
 struct dsi_panel {
 	const char *name;
 	const char *type;
@@ -407,6 +413,9 @@ struct dsi_panel {
 	bool hbm_state;
 	bool acl_state;
 	bool cabc_state;
+
+	struct brightness_alpha_pair *fod_dim_lut;
+	unsigned int fod_dim_lut_len;
 };
 
 bool dsi_display_all_displays_dead(void);

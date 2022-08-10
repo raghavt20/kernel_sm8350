@@ -16814,6 +16814,8 @@ static void __hdd_inform_wifi_off(void)
 	ucfg_blm_wifi_off(hdd_ctx->pdev);
 }
 
+int hdd_driver_load(void);
+
 static void hdd_inform_wifi_off(void)
 {
 	int ret;
@@ -16911,9 +16913,6 @@ static ssize_t wlan_hdd_state_ctrl_param_write(struct file *filp,
 			goto exit;
 		}
 	}
-
-	hdd_info("is_driver_loaded %d is_driver_recovering %d",
-		 cds_is_driver_loaded(), cds_is_driver_recovering());
 
 	if (!cds_is_driver_loaded() || cds_is_driver_recovering()) {
 		rc = wait_for_completion_timeout(&wlan_start_comp,

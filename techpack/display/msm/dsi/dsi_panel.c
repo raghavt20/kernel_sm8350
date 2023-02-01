@@ -866,6 +866,9 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	if (panel->host_config.ext_bridge_mode)
 		return 0;
 
+	if (panel->fod_hbm_enabled || panel->hbm_state)
+		goto skip_set;
+
 	if(panel->lhbm_config.enable) {
 		panel->lhbm_config.dbv_level = bl_lvl;
 		DSI_INFO("backlight type:%d dbv lvl:%d\n", bl->type, bl_lvl);
@@ -901,6 +904,7 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		rc = -ENOTSUPP;
 	}
 
+skip_set:
 	bl->real_bl_level = bl_lvl;
 
 	panel->fod_dim_alpha = dsi_panel_calc_fod_dim_alpha(panel, bl_lvl);

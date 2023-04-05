@@ -22,6 +22,8 @@
 #include "sde_vm.h"
 #include <drm/drm_probe_helper.h>
 
+#include "bl_lut.h"
+
 #define BL_NODE_NAME_SIZE 32
 #define HDR10_PLUS_VSIF_TYPE_CODE      0x81
 #define MAX_BRIGHTNESS_LEVEL 255
@@ -139,7 +141,7 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 		brightness = c_conn->thermal_max_brightness;
 
 	if (c_conn->connector_type == DRM_MODE_CONNECTOR_DSI) {
-		if(brightness && brightness < dsi_display->panel->bl_config.bl_min_level)
+		if (brightness && brightness < dsi_display->panel->bl_config.bl_min_level)
 			brightness = dsi_display->panel->bl_config.bl_min_level;
 	}
 
@@ -148,6 +150,11 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 
 	if (!bl_lvl && brightness)
 		bl_lvl = 1;
+
+	if (dsi_display->panel->bl_config.bl_remap) {
+		pr_debug("%s: remap bl_lvl from %d to %d", __func__, bl_lvl, bl_lut[bl_lvl]);
+		bl_lvl = bl_lut[bl_lvl];
+	}
 
 	if (!c_conn->allow_bl_update) {
 		c_conn->unset_bl_level = bl_lvl;
@@ -185,7 +192,9 @@ done:
 
 static int sde_backlight_device_get_brightness(struct backlight_device *bd)
 {
-	return 0;
+	struct sde_connector *c_conn = bl_get_data(bd);
+	struct dsi_display *display = (struct dsi_display *) c_conn->display;
+	return display->panel->bl_config.real_bl_level;
 }
 
 static const struct backlight_ops sde_backlight_device_ops = {

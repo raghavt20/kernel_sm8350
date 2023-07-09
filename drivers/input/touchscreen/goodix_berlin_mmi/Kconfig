@@ -1,20 +1,56 @@
-#
-# Goodix touchscreen driver configuration
-#
-menuconfig TOUCHSCREEN_GOODIX_BRL
-	tristate "Goodix berlin touchscreen"
+config TOUCHSCREEN_GOODIX_BRL_SPI
+	bool "Goodix BRL SPI Touchscreen"
+	default n
 	help
-	  Say Y here if you have a Goodix berlin series touch controller
-	  to your system.
-
-	  If build module, say M.
+	  Say Y here to enable support for Goodix BRL SPI touchscreen.
 	  If unsure, say N.
 
-if TOUCHSCREEN_GOODIX_BRL
-
-config TOUCHSCREEN_GOODIX_BRL_SPI
-	bool "support SPI bus connection"
+config GTP_FOD
+	bool "Goodix FOD Gesture"
+	default n
 	help
-		Say Y here if the touchscreen is connected via SPI bus.
+	  Say Y here to enable support for Goodix FOD gesture.
+	  If unsure, say N.
 
-endif
+config GTP_LIMIT_USE_SUPPLIER
+	bool "Goodix Limit Use Supplier"
+	default n
+	help
+	  Say Y here to enable support for Goodix limit use supplier.
+	  If unsure, say N.
+
+config GTP_ENABLE_PM_QOS
+	bool "Goodix Enable PM QoS"
+	default n
+	help
+	  Say Y here to enable support for Goodix PM QoS.
+	  If unsure, say N.
+
+config GOODIX_ESD_ENABLE
+	bool "Goodix ESD Enable"
+	default n
+	help
+	  Say Y here to enable support for Goodix ESD.
+	  If unsure, say N.
+
+config GTP_LAST_TIME
+	bool "Goodix Last Time"
+	default n
+	help
+	  Say Y here to enable support for Goodix last time.
+	  If unsure, say N.
+
+config GTP_DDA_STYLUS
+	bool "Goodix DDA Stylus"
+	default n
+	help
+	  Say Y here to enable support for Goodix DDA stylus.
+	  If unsure, say N.
+
+config TOUCHSCREEN_GOODIX_BRL_MMI
+	tristate "Goodix BRL MMI Touchscreen"
+	depends on I2C
+	default n
+	help
+	  Say Y here to build the Goodix BRL MMI touchscreen driver as a module.
+	  If unsure, say N.

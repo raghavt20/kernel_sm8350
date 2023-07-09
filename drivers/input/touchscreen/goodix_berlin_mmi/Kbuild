@@ -1,9 +1,5 @@
 # add -Wall to try to catch everything we can.
-EXTRA_CFLAGS += -Wall
-EXTRA_CFLAGS += \
-		-I$(ANDROID_BUILD_TOP)/motorola/kernel/modules/include
-
-obj-m := goodix_brl_mmi.o
+obj-$(CONFIG_TOUCHSCREEN_GOODIX_BRL_MMI) += goodix_brl_mmi.o
 goodix_brl_mmi-objs := \
 					goodix_brl_i2c.o \
 					goodix_brl_spi.o \
@@ -60,7 +56,7 @@ ifneq ($(filter m y,$(CONFIG_GTP_DDA_STYLUS)),)
     goodix_brl_mmi-objs += goodix_ts_dda.o
 endif
 
-ifneq ($(filter m y,$(CONFIG_INPUT_TOUCHSCREEN_MMI)),)
+ifneq ($(filter m y,$(CONFIG_TOUCHSCREEN_MMI)),)
     EXTRA_CFLAGS += -DCONFIG_INPUT_TOUCHSCREEN_MMI
     goodix_brl_mmi-objs += goodix_ts_mmi.o
 endif
@@ -69,38 +65,5 @@ ifneq ($(filter m y, $(CONFIG_BOARD_USES_DOUBLE_TAP_CTRL)),)
 	EXTRA_CFLAGS += -DCONFIG_BOARD_USES_DOUBLE_TAP_CTRL
 endif
 
-ifneq ($(findstring _factory,$(TARGET_PRODUCT)),)
-USE_TARGET_PRODUCT := $(strip $(subst _factory,, $(TARGET_PRODUCT)))
-else
-USE_TARGET_PRODUCT := $(TARGET_PRODUCT)
-endif
+EXTRA_CFLAGS += -DPRODUCT_TUNDRA
 
-ifneq ($(filter oneli, $(USE_TARGET_PRODUCT)), )
-        EXTRA_CFLAGS += -DPRODUCT_ONELI
-else ifneq ($(filter hiphi, $(USE_TARGET_PRODUCT)), )
-        EXTRA_CFLAGS += -DPRODUCT_HIPHI
-else ifneq ($(filter hiphic, $(USE_TARGET_PRODUCT)), )
-        EXTRA_CFLAGS += -DPRODUCT_HIPHIC
-else ifneq ($(filter li, $(USE_TARGET_PRODUCT)), )
-        EXTRA_CFLAGS += -DPRODUCT_LI
-else ifneq ($(filter eqs, $(USE_TARGET_PRODUCT)), )
-        EXTRA_CFLAGS += -DPRODUCT_EQS
-else ifneq ($(filter tundra%, $(USE_TARGET_PRODUCT)), )
-        EXTRA_CFLAGS += -DPRODUCT_TUNDRA
-else ifneq ($(filter miami%, $(USE_TARGET_PRODUCT)), )
-        EXTRA_CFLAGS += -DPRODUCT_MIAMI
-else ifneq ($(filter rtwo%, $(USE_TARGET_PRODUCT)), )
-        EXTRA_CFLAGS += -DPRODUCT_RTWO
-else ifneq ($(filter bronco, $(USE_TARGET_PRODUCT)), )
-        EXTRA_CFLAGS += -DPRODUCT_BRONCO
-else ifneq ($(filter felix, $(USE_TARGET_PRODUCT)), )
-        EXTRA_CFLAGS += -DCONFIG_GTP_DISP_MODE
-else ifneq ($(filter zeekr%, $(USE_TARGET_PRODUCT)), )
-        EXTRA_CFLAGS += -DPRODUCT_ZEEKR
-else ifneq ($(filter lynkco%, $(USE_TARGET_PRODUCT)), )
-        EXTRA_CFLAGS += -DPRODUCT_LYNKCO
-endif
-$(warning "william EXTRA_CFLAGS = $(EXTRA_CFLAGS)")
-
-KBUILD_EXTRA_SYMBOLS += $(CURDIR)/$(KBUILD_EXTMOD)/../touchscreen_mmi/$(GKI_OBJ_MODULE_DIR)/Module.symvers
-KBUILD_EXTRA_SYMBOLS += $(CURDIR)/$(KBUILD_EXTMOD)/../../../mmi_info/$(GKI_OBJ_MODULE_DIR)/Module.symvers

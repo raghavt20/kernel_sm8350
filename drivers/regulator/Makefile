@@ -152,3 +152,5 @@ obj-$(CONFIG_REGULATOR_STUB) += stub-regulator.o
 obj-$(CONFIG_VIRTIO_REGULATOR) += virtio_regulator.o
 
 ccflags-$(CONFIG_REGULATOR_DEBUG) += -DDEBUG
+
+obj-$(CONFIG_REGULATOR_WL2864C)	+= wl2864c/

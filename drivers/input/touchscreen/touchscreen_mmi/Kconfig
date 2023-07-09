@@ -1,0 +1,70 @@
+config PANEL_NOTIFICATIONS
+	bool "Panel Notifications"
+	default n
+	help
+	  Say Y here to enable support for panel notifications.
+	  If unsure, say N.
+
+config DRM_DYNAMIC_REFRESH_RATE
+	bool "DRM Dynamic Refresh Rate"
+	default n
+	help
+	  Say Y here to enable support for DRM dynamic refresh rate.
+	  If unsure, say N.
+
+config TOUCHCLASS_MMI_DEBUG_INFO
+	bool "Touchclass MMI Debug Info"
+	default n
+	help
+	  Say Y here to enable support for touchclass MMI debug information.
+	  If unsure, say N.
+
+config TOUCHCLASS_MMI_GESTURE_POISON_EVENT
+	bool "Touchclass MMI Gesture Poison Event"
+	default n
+	help
+	  Say Y here to enable support for touchclass MMI gesture poison event.
+	  If unsure, say N.
+
+config TOUCHCLASS_MMI_MULTIWAY_UPDATE_FW
+	bool "Touchclass MMI Multiway Update FW"
+	default n
+	help
+	  Say Y here to enable support for touchclass MMI multiway firmware update.
+	  If unsure, say N.
+
+config DRM_PANEL_NOTIFICATIONS
+	bool "DRM Panel Notifications"
+	default n
+	help
+	  Say Y here to enable support for DRM panel notifications.
+	  If unsure, say N.
+
+config DRM_PANEL_EVENT_NOTIFICATIONS
+	bool "DRM Panel Event Notifications"
+	default n
+	help
+	  Say Y here to enable support for DRM panel event notifications.
+	  If unsure, say N.
+
+config TS_KERNEL_USE_GKI
+	bool "Touchscreen Kernel Use GKI"
+	default n
+	help
+	  Say Y here to enable support for touchscreen kernel using GKI.
+	  If unsure, say N.
+
+config BOARD_USES_DOUBLE_TAP_CTRL
+	bool "Board Uses Double Tap Control"
+	default n
+	help
+	  Say Y here if the board uses double tap control.
+	  If unsure, say N.
+
+config TOUCHSCREEN_MMI
+	tristate "Touchscreen MMI"
+	depends on I2C
+	default n
+	help
+	  Say Y here to build the Touchscreen MMI driver as a module.
+	  If unsure, say N.

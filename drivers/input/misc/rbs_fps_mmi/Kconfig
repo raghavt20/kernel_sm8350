@@ -1,0 +1,20 @@
+config PANEL_NOTIFICATIONS
+	bool "Panel Notifications"
+	default n
+	help
+	  Say Y here to enable support for panel notifications.
+	  If unsure, say N.
+
+config ET721_FOD
+	bool "ET721 FOD"
+	default n
+	help
+	  Say Y here to enable support for ET721 FOD.
+	  If unsure, say N.
+
+config RBS_FPS_MMI
+	tristate "RBS FPS MMI"
+	default n
+	help
+	  Say Y here to build the RBS FPS MMI driver as a module.
+	  If unsure, say N.

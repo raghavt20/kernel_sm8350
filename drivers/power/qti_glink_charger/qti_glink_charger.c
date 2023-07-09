@@ -26,7 +26,6 @@
 #include <linux/mutex.h>
 #include <linux/delay.h>
 #include <linux/soc/qcom/pmic_glink.h>
-#include <linux/power/bm_adsp_ulog.h>
 
 #include "mmi_charger.h"
 #include "qti_glink_charger.h"
@@ -45,8 +44,6 @@
 
 #define BATT_DEFAULT_ID 107000
 #define BATT_SN_UNKNOWN "unknown-sn"
-
-#define OEM_BM_ULOG_SIZE		4096
 
 #define VBUS_MIN_MV			4000
 
@@ -460,7 +457,6 @@ static int qti_charger_write(struct qti_charger *chg, u32 property,
 		goto out;
 	} else {
 		rc = 0;
-		bm_ulog_print_log(OEM_BM_ULOG_SIZE);
 	}
 out:
 	mmi_dbg(chg, "Complete data write for property: %u\n", property);
@@ -602,10 +598,6 @@ static int qti_charger_get_batt_info(void *data, struct mmi_battery_info *batt_i
 	chg->batt_info.batt_fcc_ma = info.batt_fcc_ua / 1000;
 	memcpy(batt_info, &chg->batt_info, sizeof(struct mmi_battery_info));
 
-	if (batt_status != chg->batt_info.batt_status) {
-		bm_ulog_print_log(OEM_BM_ULOG_SIZE);
-	}
-
 	return rc;
 }
 #if defined(WIRELESS_CPS4035B) || defined(WIRELESS_CPS4019)
@@ -744,8 +736,6 @@ static int qti_charger_get_chg_info(void *data, struct mmi_charger_info *chg_inf
 
 		qti_wireless_charge_dump_info(chg, wls_info);
 	}
-
-	bm_ulog_print_log(OEM_BM_ULOG_SIZE);
 
 	return rc;
 }
@@ -2700,8 +2690,6 @@ static int qti_charger_init(struct qti_charger *chg)
 		mmi_err(chg,
 			   "Couldn't create wls_fod_gain\n");
 	}
-
-	bm_ulog_print_mask_log(BM_ALL, BM_LOG_LEVEL_INFO, OEM_BM_ULOG_SIZE);
 
 	wireless_psy_init(chg);
 

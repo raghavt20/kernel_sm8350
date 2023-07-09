@@ -817,6 +817,8 @@ static bool dsi_panel_set_hbm_backlight(struct dsi_panel *panel, u32 *bl_lvl)
 	return false;
 }
 
+static int dsi_panel_apply_hbm_status(struct dsi_panel *panel);
+
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 {
 	int rc = 0;
@@ -865,6 +867,9 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 
 skip_set:
 	bl->real_bl_level = bl_lvl;
+
+	if (panel->fod_hbm_enabled)
+		dsi_panel_apply_hbm_status(panel);
 
 	return rc;
 }
@@ -4461,7 +4466,7 @@ static int dsi_panel_update_hbm_cmd(struct dsi_panel_cmd_set *cmd_set,
 }
 
 static int dsi_panel_set_hbm_status(struct dsi_panel *panel,
-				    bool fod_hbm_status)
+				    bool fod_hbm_status, bool hbm_status)
 {
 	struct dsi_display_mode_priv_info *priv_info;
 	struct dsi_panel_cmd_set *cmd_set;
@@ -4487,7 +4492,10 @@ static int dsi_panel_set_hbm_status(struct dsi_panel *panel,
 		return -EINVAL;
 	}
 
-	if (fod_hbm_status) {
+	if (hbm_status) {
+		type = DSI_CMD_SET_HBM_ON;
+		alpha_val = bl_level;
+	} else if (fod_hbm_status) {
 		type = DSI_CMD_SET_HBM_FOD_ON;
 		alpha_val = panel->lhbm_config.alpha[bl_level];
 	} else {
@@ -4526,6 +4534,12 @@ static int dsi_panel_set_hbm_status(struct dsi_panel *panel,
 	return 0;
 }
 
+static int dsi_panel_apply_hbm_status(struct dsi_panel *panel)
+{
+	return dsi_panel_set_hbm_status(panel, panel->fod_hbm_enabled,
+					panel->hbm_state);
+}
+
 static ssize_t sysfs_fod_hbm_read(struct device *dev,
 				  struct device_attribute *attr,
 				  char *buf)
@@ -4558,7 +4572,7 @@ static ssize_t sysfs_fod_hbm_write(struct device *dev,
 	if (panel->fod_hbm_enabled == status)
 		goto exit;
 
-	rc = dsi_panel_set_hbm_status(panel, status);
+	rc = dsi_panel_set_hbm_status(panel, status, panel->hbm_state);
 	if (rc)
 		goto exit;
 
@@ -6135,6 +6149,12 @@ int dsi_panel_post_enable(struct dsi_panel *panel)
 			pr_err("[%s] failed to send DSI_CMD_SET_ON cmds, rc=%d\n",
 			       panel->name, rc);
 		}
+	}
+
+	if (panel->hbm_state) {
+		rc = dsi_panel_apply_hbm_status(panel);
+		if (rc)
+			goto error;
 	}
 
 	PANEL_NOTIFY(PANEL_EVENT_DISPLAY_ON);

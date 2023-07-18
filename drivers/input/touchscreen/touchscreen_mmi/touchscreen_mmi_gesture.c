@@ -79,7 +79,6 @@ struct ts_mmi_touch_events_data {
 static struct ts_mmi_sensor_platform_data *sensor_pdata;
 static struct ts_mmi_sensor_platform_data *palm_sensor_pdata;
 static struct ts_mmi_touch_events_data *events_data;
-static struct ts_mmi_sensor_platform_data *cli_sensor_pdata;
 
 #ifdef TS_MMI_TOUCH_GESTURE_LOG_EVENT
 static inline void ts_mmi_touch_log_event(struct touch_event_with_time_data *dst, const struct touch_event_data *src)
@@ -251,7 +250,6 @@ static int ts_mmi_gesture_handler(struct gesture_event_data *gev)
 	struct ts_mmi_dev *touch_cdev = events_data->touch_cdev;
 	int key_code;
 	bool need2report = true;
-	struct ts_mmi_dev *touch_cdev = sensor_pdata->touch_cdev;
 
 	switch (gev->evcode) {
 	case 1:
@@ -261,10 +259,6 @@ static int ts_mmi_gesture_handler(struct gesture_event_data *gev)
 			break;
 	case 2:
 		key_code = KEY_F2;
-		if(gev->evdata.x == 0)
-			gev->evdata.x = touch_cdev->pdata.fod_x ;
-		if(gev->evdata.y== 0)
-			gev->evdata.y = touch_cdev->pdata.fod_y;
 		ts_mmi_zero_tap_handler(touch_cdev);
 		input_report_abs(sensor_pdata->input_sensor_dev, ABS_X, gev->evdata.x);
 		input_report_abs(sensor_pdata->input_sensor_dev, ABS_Y, gev->evdata.y);
@@ -273,10 +267,6 @@ static int ts_mmi_gesture_handler(struct gesture_event_data *gev)
 	case 3:
 		key_code = KEY_F3;
 		pr_info("%s: zero tap up\n", __func__);
-		break;
-	case 4:
-		key_code = KEY_F4;
-		pr_info("%s: double tap\n", __func__);
 		break;
 	default:
 		need2report = false;
@@ -290,51 +280,6 @@ static int ts_mmi_gesture_handler(struct gesture_event_data *gev)
 	input_sync(sensor_pdata->input_sensor_dev);
 	input_report_key(sensor_pdata->input_sensor_dev, key_code, 0);
 	input_sync(sensor_pdata->input_sensor_dev);
-
-	return 0;
-}
-
-static int ts_mmi_cli_gesture_handler(struct gesture_event_data *gev)
-{
-	int key_code;
-	bool need2report = true;
-	struct ts_mmi_dev *touch_cdev = cli_sensor_pdata->touch_cdev;
-
-	switch (gev->evcode) {
-	case 1:
-		key_code = KEY_F1;
-		pr_info("%s: single tap\n", __func__);
-			break;
-	case 2:
-		key_code = KEY_F2;
-		if(gev->evdata.x == 0)
-			gev->evdata.x = touch_cdev->pdata.fod_x ;
-		if(gev->evdata.y== 0)
-			gev->evdata.y = touch_cdev->pdata.fod_y;
-		input_report_abs(cli_sensor_pdata->input_sensor_dev, ABS_X, gev->evdata.x);
-		input_report_abs(cli_sensor_pdata->input_sensor_dev, ABS_Y, gev->evdata.y);
-		pr_info("%s: zero tap; x=%x, y=%x\n", __func__, gev->evdata.x, gev->evdata.y);
-		break;
-	case 3:
-		key_code = KEY_F3;
-		pr_info("%s: zero tap up\n", __func__);
-		break;
-	case 4:
-		key_code = KEY_F4;
-		pr_info("%s: double tap\n", __func__);
-		break;
-	default:
-		need2report = false;
-		pr_info("%s: unknown id=%x\n", __func__, gev->evcode);
-	}
-
-	if (!need2report)
-		return 1;
-
-	input_report_key(cli_sensor_pdata->input_sensor_dev, key_code, 1);
-	input_sync(cli_sensor_pdata->input_sensor_dev);
-	input_report_key(cli_sensor_pdata->input_sensor_dev, key_code, 0);
-	input_sync(cli_sensor_pdata->input_sensor_dev);
 
 	return 0;
 }
@@ -416,7 +361,7 @@ static int ts_mmi_touch_event_edge_handler(struct touch_event_data *tev,  struct
 static int ts_mmi_touch_event_handler(struct touch_event_data *tev,  struct input_dev *input_dev)
 {
 	struct ts_mmi_dev *touch_cdev = events_data->touch_cdev;
-	__maybe_unused int ret = 0;
+	int ret = 0;
 
 #ifdef TS_MMI_TOUCH_EDGE_GESTURE
 	ts_mmi_touch_event_edge_handler(tev, input_dev);
@@ -457,6 +402,7 @@ static int ts_mmi_touch_event_handler(struct touch_event_data *tev,  struct inpu
 
 bool ts_mmi_is_sensor_enable(void)
 {
+	struct ts_mmi_dev *touch_cdev;
 	if (sensor_pdata != NULL) {
 		touch_cdev = sensor_pdata->touch_cdev;
 		if (touch_cdev->double_tap_enabled_prev)
@@ -474,7 +420,6 @@ bool ts_mmi_is_sensor_enable(void)
 static int ts_mmi_sensor_set_enable(struct sensors_classdev *sensors_cdev,
 		unsigned int enable)
 {
-#if !defined(CONFIG_BOARD_USES_DOUBLE_TAP_CTRL)
 	struct ts_mmi_sensor_platform_data *sensor_pdata = container_of(
 			sensors_cdev, struct ts_mmi_sensor_platform_data, ps_cdev);
 	struct ts_mmi_dev *touch_cdev = sensor_pdata->touch_cdev;
@@ -487,7 +432,6 @@ static int ts_mmi_sensor_set_enable(struct sensors_classdev *sensors_cdev,
 	} else {
 		dev_err(DEV_TS, "%s: unknown enable symbol\n", __func__);
 	}
-#endif
 	return 0;
 }
 
@@ -525,26 +469,6 @@ static struct sensors_classdev __maybe_unused sensors_touch_cdev = {
 	.fifo_reserved_event_count = 0,
 	.fifo_max_event_count = 0,
 	.enabled = 1,
-	.delay_msec = 200,
-	.sensors_enable = NULL,
-	.sensors_poll_delay = NULL,
-};
-
-static struct sensors_classdev __maybe_unused cli_sensors_touch_cdev = {
-	.name = "s-dt-gesture",
-	.vendor = "Motorola",
-	.version = 1,
-	.type = SENSOR_TYPE_MOTO_DOUBLE_TAP,
-	.max_range = "5.0",
-	.resolution = "5.0",
-	.sensor_power = "1",
-	.min_delay = 0,
-	.max_delay = 0,
-	/* WAKE_UP & SPECIAL_REPORT */
-	.flags = 1 | 6,
-	.fifo_reserved_event_count = 0,
-	.fifo_max_event_count = 0,
-	.enabled = 0,
 	.delay_msec = 200,
 	.sensors_enable = NULL,
 	.sensors_poll_delay = NULL,
@@ -610,7 +534,6 @@ int ts_mmi_gesture_init(struct ts_mmi_dev *touch_cdev)
 	__set_bit(KEY_F1, sensor_input_dev->keybit);
 	__set_bit(KEY_F2, sensor_input_dev->keybit);
 	__set_bit(KEY_F3, sensor_input_dev->keybit);
-	__set_bit(KEY_F4, sensor_input_dev->keybit);
 	__set_bit(EV_ABS, sensor_input_dev->evbit);
 	__set_bit(EV_SYN, sensor_input_dev->evbit);
 	/* TODO: fill in real screen resolution */
@@ -666,81 +589,6 @@ int ts_mmi_gesture_remove(struct ts_mmi_dev *touch_cdev)
 	devm_kfree(DEV_TS, events_data);
 	sensor_pdata = NULL;
 	events_data = NULL;
-
-	return 0;
-}
-
-int ts_mmi_cli_gesture_init(struct ts_mmi_dev *touch_cdev)
-{
-	struct input_dev *sensor_input_dev;
-	int err;
-
-	sensor_input_dev = input_allocate_device();
-	if (!sensor_input_dev) {
-		dev_err(DEV_TS, "%s: Failed to allocate input device", __func__);
-		goto exit;
-	}
-
-	cli_sensor_pdata = devm_kzalloc(&sensor_input_dev->dev,
-			sizeof(struct ts_mmi_sensor_platform_data), GFP_KERNEL);
-	if (!cli_sensor_pdata) {
-		dev_err(DEV_TS, "%s: Failed to allocate memory", __func__);
-		goto free_sensor_input_dev;
-	}
-
-	__set_bit(EV_KEY, sensor_input_dev->evbit);
-	__set_bit(KEY_F1, sensor_input_dev->keybit);
-	__set_bit(KEY_F2, sensor_input_dev->keybit);
-	__set_bit(KEY_F3, sensor_input_dev->keybit);
-	__set_bit(KEY_F4, sensor_input_dev->keybit);
-	__set_bit(EV_ABS, sensor_input_dev->evbit);
-	__set_bit(EV_SYN, sensor_input_dev->evbit);
-	/* TODO: fill in real screen resolution */
-	input_set_abs_params(sensor_input_dev, ABS_X, 0, 4096, 0, 0);
-	input_set_abs_params(sensor_input_dev, ABS_Y, 0, 4096, 0, 0);
-
-	sensor_input_dev->name = "s-double-tap";
-	cli_sensor_pdata->input_sensor_dev = sensor_input_dev;
-
-	err = input_register_device(sensor_input_dev);
-	if (err) {
-		dev_err(DEV_TS, "%s: Unable to register device, err=%d", __func__, err);
-		goto free_sensor_pdata;
-	}
-
-	cli_sensor_pdata->ps_cdev = cli_sensors_touch_cdev;
-	cli_sensor_pdata->ps_cdev.sensors_enable = ts_mmi_sensor_set_enable;
-	cli_sensor_pdata->touch_cdev = touch_cdev;
-
-	err = sensors_classdev_register(&sensor_input_dev->dev,
-				&cli_sensor_pdata->ps_cdev);
-	if (err)
-		goto unregister_sensor_input_device;
-
-	/* export report gesture function to vendor */
-	touch_cdev->mdata->exports.report_gesture = ts_mmi_cli_gesture_handler;
-
-	return 0;
-
-unregister_sensor_input_device:
-	input_unregister_device(sensor_input_dev);
-	sensor_input_dev = NULL;
-free_sensor_pdata:
-	if (sensor_input_dev && cli_sensor_pdata)
-		devm_kfree(&sensor_input_dev->dev, cli_sensor_pdata);
-free_sensor_input_dev:
-	if (sensor_input_dev)
-		input_free_device(sensor_input_dev);
-exit:
-	return 1;
-}
-
-int ts_mmi_cli_gesture_remove(struct ts_mmi_dev *touch_cdev)
-{
-	sensors_classdev_unregister(&cli_sensor_pdata->ps_cdev);
-	input_unregister_device(cli_sensor_pdata->input_sensor_dev);
-	devm_kfree(&cli_sensor_pdata->input_sensor_dev->dev, cli_sensor_pdata);
-	cli_sensor_pdata = NULL;
 
 	return 0;
 }

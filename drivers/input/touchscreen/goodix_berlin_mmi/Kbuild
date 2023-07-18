@@ -8,8 +8,7 @@ goodix_brl_mmi-objs := \
 					goodix_ts_utils.o \
 					goodix_brl_fwupdate.o \
 					goodix_ts_inspect.o \
-					goodix_ts_tools.o \
-					goodix_ts_config.o
+					goodix_ts_tools.o
 
 ifneq ($(filter m y, $(CONFIG_DRM_PANEL_EVENT_NOTIFICATIONS)),)
 	ccflags-y += -DCONFIG_DRM_PANEL_EVENT_NOTIFICATIONS

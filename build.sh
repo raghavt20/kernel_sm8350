@@ -56,24 +56,28 @@ completion()
 {
     cd ${objdir}
     COMPILED_IMAGE=arch/arm64/boot/Image
-    COMPILED_DTBO=arch/arm64/boot/dtbo.img
-    if [[ -f ${COMPILED_IMAGE} && ${COMPILED_DTBO} ]]; then
+    DTB_DIR=arch/arm64/boot/dts/vendor/qcom/
+    COMPILED_DTBO=arch/arm64/boot/dts/vendor/qcom/*.img
+    COMPILED_DTB=arch/arm64/boot/dts/vendor/qcom/lahaina*dtb
+    if [[ -f ${COMPILED_IMAGE} ]]; then
 
-        git clone -q https://github.com/raghavt20/AnyKernel3 -b vayu $anykernel
+        git clone -q https://github.com/raghavt20/AnyKernel3 -b tundra $anykernel
 
-        mv -f $ZIMAGE ${COMPILED_DTBO} $anykernel
-
+        cp -f ${COMPILED_IMAGE} $anykernel
+        cp -f "${DTB_DIR}"/*.img $anykernel
+        mkdir -p $anykernel/dtb
+        cp -f "${DTB_DIR}"/lahaina*dtb $anykernel/dtb
         cd $anykernel
         find . -name "*.zip" -type f
         find . -name "*.zip" -type f -delete
         zip -r AnyKernel.zip *
-        mv AnyKernel.zip $zip_name
-        mv $anykernel/$zip_name $HOME/$zip_name
-        rm -rf $anykernel
+        cp AnyKernel.zip $zip_name
+        cp $anykernel/$zip_name $HOME/$zip_name
+        #rm -rf $anykernel
         END=$(date +"%s")
         DIFF=$(($END - $START))
         curl --upload-file $HOME/$zip_name https://free.keep.sh; echo
-        rm $HOME/$zip_name
+        #rm $HOME/$zip_name
         echo -e ${LGR} "############################################"
         echo -e ${LGR} "############# OkThisIsEpic!  ##############"
         echo -e ${LGR} "############################################${NC}"

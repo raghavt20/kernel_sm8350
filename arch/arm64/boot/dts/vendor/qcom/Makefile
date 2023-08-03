@@ -6,19 +6,9 @@ endif
 
 # Motorola Device Trees
 dtbo-$(CONFIG_ARCH_LAHAINA) += \
-		lahaina-jordan-evb-overlay.dtbo \
-		lahaina-dubai-evb-overlay.dtbo \
-		lahaina-dubai-evb3-overlay.dtbo \
-		lahaina-xpeng-evb-overlay.dtbo \
 		lahaina-tundra-evb-overlay.dtbo \
 		lahaina-tundra-dvt1-overlay.dtbo \
-		lahaina-tundra-dvt2-overlay.dtbo \
-		lahaina-banks-evt1-overlay.dtbo \
-		lahaina-banks-evt1b-overlay.dtbo \
-		lahaina-banks-evt2-overlay.dtbo \
-		lahaina-banks-evt2b-overlay.dtbo \
-		lahaina-banks-dvt1-overlay.dtbo
-
+		lahaina-tundra-dvt2-overlay.dtbo
 
 lahaina-jordan-evb-overlay.dtbo-base := lahaina-moto-base.dtb
 lahaina-dubai-evb-overlay.dtbo-base := lahaina-moto-base.dtb

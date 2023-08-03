@@ -993,10 +993,6 @@ static int dsi_panel_send_param_cmd(struct dsi_panel *panel,
 
         param_map = panel_param->val_map;
 
-	DSI_INFO("%s: param_name=%s; val_max =%d, default_value=%d, value=%d\n",
-	        __func__, panel_param->param_name, panel_param->val_max,
-		panel_param->default_value, panel_param->value);
-
 	mutex_lock(&panel->panel_lock);
 
 	if (!panel->panel_initialized) {
@@ -1009,12 +1005,8 @@ static int dsi_panel_send_param_cmd(struct dsi_panel *panel,
 
 	if (panel_param->value == param_info->value && param_info->param_idx != PARAM_DC_ID)
 	{
-		DSI_INFO("(mode=%d): requested value=%d is same. Do nothing\n",
-			param_info->param_idx, param_info->value);
 		rc = 0;
 	} else {
-		DSI_DEBUG("%s: requested: old=%d new=%d.\n", __func__,
-			panel_param->value, param_info->value);
 		param_map = panel->param_cmds[param_info->param_idx].val_map;
 		param_map_state = &param_map[param_info->value];
 
@@ -1042,8 +1034,6 @@ static int dsi_panel_send_param_cmd(struct dsi_panel *panel,
 			cmds++;
 		}
 		panel_param->value = param_info->value;
-		DSI_INFO("(%d) is setting new value %d\n",
-			param_info->param_idx, param_info->value);
 		rc = len;
 	}
 
@@ -1135,8 +1125,6 @@ static int dsi_panel_set_hbm(struct dsi_panel *panel,
 	int rc = 0;
 	u32 bl_lvl;
 	struct dsi_panel_lhbm_config *lhbm_config = &panel->lhbm_config;
-
-	pr_info("Set HBM to (%d)\n", param_info->value);
 
 	if(lhbm_config->enable && param_info->value != HBM_ON_STATE) {
 		dsi_panel_set_local_hbm_param(panel, param_info, lhbm_config);

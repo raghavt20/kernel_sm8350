@@ -349,6 +349,7 @@ static void ts_mmi_queued_resume(struct ts_mmi_dev *touch_cdev)
 	touch_cdev->udfps_pressed = false;
 	touch_cdev->pm_mode = TS_MMI_PM_ACTIVE;
 	mutex_unlock(&touch_cdev->extif_mutex);
+	clear_bit(TS_MMI_SET_GESTURES, &touch_cdev->cmd_pending);
 	dev_info(DEV_MMI, "%s: done\n", __func__);
 }
 
@@ -435,7 +436,7 @@ static void ts_mmi_worker_func(struct work_struct *w)
 			ts_mmi_queued_resume(touch_cdev);
 			ts_mmi_queued_stop(touch_cdev);
 			ts_mmi_queued_power_off(touch_cdev);
-
+			clear_bit(TS_MMI_SET_GESTURES, &touch_cdev->cmd_pending);
 			break;
 
 		default:

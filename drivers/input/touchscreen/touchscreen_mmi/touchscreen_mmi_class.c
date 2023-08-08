@@ -357,21 +357,25 @@ static bool _gesture_set(struct ts_mmi_dev *touch_cdev,
 
 static void gesture_sync(struct ts_mmi_dev *touch_cdev)
 {
-	kfifo_put(&touch_cdev->cmd_pipe, TS_MMI_SET_GESTURES);
-	schedule_delayed_work(&touch_cdev->work, 0);
+    if (!test_and_set_bit(TS_MMI_SET_GESTURES, &touch_cdev->cmd_pending)) {
+        kfifo_put(&touch_cdev->cmd_pipe, TS_MMI_SET_GESTURES);
+        schedule_delayed_work(&touch_cdev->work, 100);
+    }
 }
 
 static void gesture_set(struct ts_mmi_dev *touch_cdev,
-			unsigned long bit, bool enable)
+                        unsigned long bit, bool enable)
 {
-	bool sync;
+    bool sync;
 
-	mutex_lock(&touch_cdev->extif_mutex);
-	sync = _gesture_set(touch_cdev, bit, enable);
-	mutex_unlock(&touch_cdev->extif_mutex);
+    mutex_lock(&touch_cdev->extif_mutex);
+    sync = _gesture_set(touch_cdev, bit, enable);
+    mutex_unlock(&touch_cdev->extif_mutex);
 
-	if (sync && !touch_cdev->udfps_pressed && !touch_cdev->double_tap_pressed && !touch_cdev->single_tap_pressed)
-		gesture_sync(touch_cdev);
+    if (sync && !touch_cdev->udfps_pressed &&
+        !touch_cdev->double_tap_pressed &&
+        !touch_cdev->single_tap_pressed)
+            gesture_sync(touch_cdev);
 }
 
 static ssize_t gesture_store(struct device *dev,

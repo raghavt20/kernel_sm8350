@@ -9259,6 +9259,8 @@ int dsi_display_post_enable(struct dsi_display *display)
 {
 	int rc = 0;
 
+	DSI_DEBUG("%s+\n", __func__);
+
 	if (!display) {
 		DSI_ERR("Invalid params\n");
 		return -EINVAL;
@@ -9287,7 +9289,10 @@ int dsi_display_post_enable(struct dsi_display *display)
 		dsi_display_clk_ctrl(display->dsi_clk_handle,
 			DSI_ALL_CLKS, DSI_CLK_OFF);
 
-	dsi_panel_set_custom_param(display->panel);
+	if (display->was_active) {
+		dsi_panel_set_custom_param(display->panel);
+		display->was_active = false;
+	}
 
 	mutex_unlock(&display->display_lock);
 	return rc;
@@ -9464,6 +9469,7 @@ int dsi_display_disable(struct dsi_display *display)
 		display->panel->panel_initialized = false;
 		display->panel->power_mode = SDE_MODE_DPMS_OFF;
 	}
+	display->was_active = true;
 	mutex_unlock(&display->display_lock);
 	SDE_EVT32(SDE_EVTLOG_FUNC_EXIT);
 	return rc;

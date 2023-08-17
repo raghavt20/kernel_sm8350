@@ -973,7 +973,7 @@ static int dsi_panel_send_param_cmd(struct dsi_panel *panel,
 	if (param_info->value >= panel_param->val_max)
 		param_info->value = panel_param->val_max - 1;
 
-	if (panel_param->value == param_info->value && param_info->param_idx != PARAM_DC_ID)
+	if (panel_param->value == param_info->value)
 	{
 		DSI_INFO("(mode=%d): requested value=%d is same. Do nothing\n",
 			param_info->param_idx, param_info->value);
@@ -1107,7 +1107,7 @@ static int dsi_panel_set_hbm(struct dsi_panel *panel,
 	if(lhbm_config->enable && param_info->value != HBM_ON_STATE) {
 		dsi_panel_set_local_hbm_param(panel, param_info, lhbm_config);
 	}
-
+	panel->hbm_state = param_info->value;
 	rc = dsi_panel_send_param_cmd(panel, param_info);
 	if (rc < 0) {
 		DSI_ERR("%s: failed to send param cmds. ret=%d\n", __func__, rc);
@@ -1143,6 +1143,7 @@ static int dsi_panel_set_cabc(struct dsi_panel *panel,
 	int rc = 0;
 
 	pr_info("%s: Set CABC to (%d)\n", __func__, param_info->value);
+	panel->cabc_state = param_info->value;
 	rc = dsi_panel_send_param_cmd(panel, param_info);
 	if (rc < 0)
 		pr_err("%s: failed to send param cmds. ret=%d\n", __func__, rc);
@@ -1157,7 +1158,6 @@ static int dsi_panel_set_dc(struct dsi_panel *panel,
 
 	pr_info("Set DC to (%d)\n", param_info->value);
 	panel->dc_state = param_info->value;
-	memcpy(&panel->curDCModeParaInfo, param_info, sizeof(struct msm_param_info));
 	rc = dsi_panel_send_param_cmd(panel, param_info);
 	if (rc < 0)
 		DSI_ERR("%s: failed to send param cmds. ret=%d\n", __func__, rc);
@@ -1198,8 +1198,9 @@ int dsi_panel_set_param(struct dsi_panel *panel,
 			break;
 		case PARAM_ACL_ID :
 			dsi_panel_set_acl(panel, param_info);
+			break;
 		case PARAM_DC_ID :
-			rc = dsi_panel_set_dc(panel, param_info);
+			dsi_panel_set_dc(panel, param_info);
 			break;
 		case PARAM_COLOR_ID :
 			dsi_panel_set_color(panel, param_info);
@@ -1221,8 +1222,7 @@ void dsi_panel_reset_param(struct dsi_panel *panel)
 	for (i = 0; i < PARAM_ID_NUM; i++) {
 		/* Since only panel support for now */
 		param = &dsi_panel_param[0][i];
-		if(i != PARAM_DC_ID)
-			param->value = param->default_value;
+		param->value = param->default_value;
 	}
 }
 
@@ -1232,6 +1232,8 @@ void dsi_panel_set_custom_param(struct dsi_panel *panel)
 	struct msm_param_info param_info;
 	int i = 0;
 	bool apply = false;
+
+	DSI_DEBUG("%s+\n", __func__);
 
 	for (i = 0; i < PARAM_ID_NUM; i++) {
 		param = &dsi_panel_param[0][i];
@@ -6110,19 +6112,6 @@ err:
 
 	mutex_unlock(&panel->panel_lock);
 
-	//In normal case, when DC mode is enabled, it will be set to 0 before panel_disable
-	//and set to 1 after panel_enable. But in abnormal case, when user press power key
-	//Frequentlly for many times, it is set to 1 before panel_disable and then is not set
-	//to 1 after panel_enable. It results to failure DC mode issue. Seems kernel and user
-	//space is out of sync. Add this workaroud to ensure DC mode is set if it is set to 1
-	//before panel_disable.
-	if(panel->dc_state) {
-		DSI_INFO("-: ensure dc mode is set\n");
-		panel->curDCModeParaInfo.value = 0;
-		dsi_panel_send_param_cmd(panel, &panel->curDCModeParaInfo);
-		panel->curDCModeParaInfo.value = panel->dc_state;
-		dsi_panel_send_param_cmd(panel, &panel->curDCModeParaInfo);
-	}
 	return rc;
 }
 

@@ -83,6 +83,11 @@ static int ts_mmi_queued_stop(struct ts_mmi_dev *touch_cdev) {
 		TRY_TO_CALL(pinctrl, TS_MMI_PINCTL_OFF);
 	}
 
+        touch_cdev->single_tap_pressed = false;
+        touch_cdev->double_tap_pressed = false;
+        touch_cdev->udfps_pressed = false;
+        clear_bit(TS_MMI_SET_GESTURES, &touch_cdev->cmd_pending);
+
 	dev_info(DEV_MMI, "%s: done\n", __func__);
 
 	return 0;
@@ -347,9 +352,9 @@ static void ts_mmi_queued_resume(struct ts_mmi_dev *touch_cdev)
 	touch_cdev->single_tap_pressed = false;
 	touch_cdev->double_tap_pressed = false;
 	touch_cdev->udfps_pressed = false;
+	clear_bit(TS_MMI_SET_GESTURES, &touch_cdev->cmd_pending);
 	touch_cdev->pm_mode = TS_MMI_PM_ACTIVE;
 	mutex_unlock(&touch_cdev->extif_mutex);
-	clear_bit(TS_MMI_SET_GESTURES, &touch_cdev->cmd_pending);
 	dev_info(DEV_MMI, "%s: done\n", __func__);
 }
 

@@ -35,7 +35,7 @@
 #include "aw_log.h"
 #include "aw_dsp.h"
 
-#define AW882XX_DRIVER_VERSION "v1.9.0.10"
+#define AW882XX_DRIVER_VERSION "v1.9.0.9"
 #define AW882XX_I2C_NAME "aw882xxacf_smartpa"
 
 #define AW_READ_CHIPID_RETRIES		5	/* 5 times */
@@ -815,7 +815,7 @@ static int aw882xx_dev_gain_ctl_set(struct snd_kcontrol *kcontrol,
 
 	aw_dev->cur_gain = ucontrol->value.integer.value[0];
 
-	if (ucontrol->value.integer.value[0] <= 110) {
+	if (ucontrol->value.integer.value[0] <= 90) {
 		aw_dev_dbg(aw882xx->dev, "ramp started");
 		aw_dev->ramp_in_process = 1;
 	}
@@ -1329,7 +1329,6 @@ static int aw882xx_set_spin(struct snd_kcontrol *kcontrol,
 {
 	int ret = -EINVAL;
 	uint32_t ctrl_value = 0;
-	struct aw_device *aw_dev;
 	aw_snd_soc_codec_t *codec =
 		aw_componet_codec_ops.kcontrol_codec(kcontrol);
 	struct aw882xx *aw882xx =
@@ -1337,8 +1336,6 @@ static int aw882xx_set_spin(struct snd_kcontrol *kcontrol,
 
 	aw_dev_dbg(aw882xx->dev, "ucontrol->value.integer.value[0]=%ld",
 			ucontrol->value.integer.value[0]);
-
-	aw_dev = aw882xx->aw_pa;
 
 	ctrl_value = ucontrol->value.integer.value[0];
 	if (aw882xx->pstream) {
@@ -1356,15 +1353,12 @@ static int aw882xx_set_spin(struct snd_kcontrol *kcontrol,
 static int aw882xx_get_spin(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct aw_device *aw_dev;
 	aw_snd_soc_codec_t *codec =
 		aw_componet_codec_ops.kcontrol_codec(kcontrol);
 	struct aw882xx *aw882xx =
 		aw_componet_codec_ops.codec_get_drvdata(codec);
 	int ctrl_value;
 	int ret = -EINVAL;
-
-	aw_dev = aw882xx->aw_pa;
 
 	if (aw882xx->pstream) {
 		ret = aw_dev_get_spin(&ctrl_value);
@@ -1804,12 +1798,6 @@ static int aw882xx_update_algo_profile(struct aw882xx *aw882xx)
 			aw_dev_err(aw882xx->dev, "set algo prof failed");
 			return -1;
 		}
-		if (!g_algo_rx_en) {
-		  ret = aw_dev_set_afe_module_en(AW_RX_MODULE, 0); //bypass AW moudle
-		  if (ret)
-		    aw_dev_err(aw882xx->dev, "dsp_msg error, ret=%d", ret);
-		}
-		aw_dev_info(aw882xx->dev, "AW MODULE cur state: %s", g_algo_rx_en?"Enalbe" : "Bypass");
 	}
 	return 0;
 

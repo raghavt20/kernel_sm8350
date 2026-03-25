@@ -447,15 +447,19 @@ int32_t cam_sensor_update_slave_info(struct cam_cmd_probe *probe_info,
 	s_ctrl->sensor_probe_addr_type =  probe_info->addr_type;
 	s_ctrl->sensor_probe_data_type =  probe_info->data_type;
 
+#ifdef CONFIG_CAMERA_SUB_DEVICE_PROBE
 	s_ctrl->probe_sub_device          =  probe_info->probe_sub_device;
 	s_ctrl->sub_device_addr           =  probe_info->sub_device_addr;
 	s_ctrl->sub_device_data_type      =  probe_info->sub_device_data_type;
 	s_ctrl->sub_device_addr_type      =  probe_info->sub_device_addr_type;
 	s_ctrl->sub_device_id_addr        =  probe_info->sub_device_id_addr;
 	s_ctrl->expected_sub_device_id    =  probe_info->expected_sub_device_id;
+#endif
+#ifdef CONFIG_CAMERA_CCI_MASTER_CHANGE
 	s_ctrl->sub_device_cci_master     =  probe_info->sub_device_cci_master;
 	s_ctrl->sub_device_cci_device     =  probe_info->sub_device_cci_device;
 	s_ctrl->sub_device_i2c_freq_mode  =  probe_info->sub_device_i2c_freq_mode;
+#endif
 #ifdef CONFIG_CAMERA_CCI_ADDR_SWITCH
 	s_ctrl->i2c_addr_switch           =  probe_info->i2c_addr_switch;
 	s_ctrl->second_i2c_address        =  probe_info->second_i2c_address;
@@ -816,19 +820,22 @@ int cam_sensor_match_id(struct cam_sensor_ctrl_t *s_ctrl)
 	return rc;
 }
 
+#ifdef CONFIG_CAMERA_SUB_DEVICE_PROBE
 int cam_sensor_match_sub_device_id(struct cam_sensor_ctrl_t *s_ctrl)
 {
 	int rc = 0;
 	int ret = 0;
 	uint32_t sub_device_id = 0;
 	uint16_t sensor_address = 0;
+#ifdef CONFIG_CAMERA_CCI_MASTER_CHANGE
 	uint16_t sensor_freq_mode = 0;
 	uint8_t sensor_cci_master = 0;
 	uint8_t sensor_cci_device = 0;
+#endif
 
 	/* if hal doesn't config ProbeSubDevice parameter in sensor xml, return success immediately */
 	if (!s_ctrl->probe_sub_device) {
-		return 0;
+		return ret;
 	}
 
 	/* save sensor i2c address */
@@ -839,6 +846,7 @@ int cam_sensor_match_sub_device_id(struct cam_sensor_ctrl_t *s_ctrl)
 		s_ctrl->io_master_info.cci_client->sid = s_ctrl->sub_device_addr >> 1;
 	}
 
+#ifdef CONFIG_CAMERA_CCI_MASTER_CHANGE
 	/*if need change cci master*/
 	if (s_ctrl->need_change_cci_master) {
 		sensor_cci_master = s_ctrl->io_master_info.cci_client->cci_i2c_master;
@@ -869,6 +877,7 @@ int cam_sensor_match_sub_device_id(struct cam_sensor_ctrl_t *s_ctrl)
 			}
 		}
 	}
+#endif
 
 	rc = camera_io_dev_read(
 		&(s_ctrl->io_master_info),
@@ -883,6 +892,7 @@ int cam_sensor_match_sub_device_id(struct cam_sensor_ctrl_t *s_ctrl)
 	/* restore sensor i2c address */
 	s_ctrl->io_master_info.cci_client->sid = sensor_address;
 
+#ifdef CONFIG_CAMERA_CCI_MASTER_CHANGE
 	/* reset cci master */
 	if (s_ctrl->need_change_cci_master) {
 		ret = camera_io_release(&(s_ctrl->io_master_info));
@@ -906,6 +916,7 @@ int cam_sensor_match_sub_device_id(struct cam_sensor_ctrl_t *s_ctrl)
 			}
 		}
 	}
+#endif
 
 	if (sub_device_id == s_ctrl->expected_sub_device_id) {
 		CAM_INFO(CAM_SENSOR,
@@ -922,6 +933,7 @@ int cam_sensor_match_sub_device_id(struct cam_sensor_ctrl_t *s_ctrl)
 
 	return rc;
 }
+#endif
 
 int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 	void *arg)
@@ -1020,6 +1032,7 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 			goto free_power_settings;
 		}
 
+#ifdef CONFIG_CAMERA_SUB_DEVICE_PROBE
 		/* Match sub-device ID */
 		rc = cam_sensor_match_sub_device_id(s_ctrl);
 		if (rc < 0) {
@@ -1027,6 +1040,7 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 			usleep_range(20000,20000);
 			goto free_power_settings;
 		}
+#endif
 
 		CAM_INFO(CAM_SENSOR,
 			"Probe success,slot:%d,slave_addr:0x%x,sensor_id:0x%x",
@@ -1045,6 +1059,9 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 		 */
 		s_ctrl->is_probe_succeed = 1;
 		s_ctrl->sensor_state = CAM_SENSOR_INIT;
+#ifdef CONFIG_MOT_SENSOR_PRE_POWERUP
+		s_ctrl->sensor_power_up_done = 0;
+#endif
 	}
 		break;
 	case CAM_ACQUIRE_DEV: {
@@ -1334,6 +1351,69 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 		}
 	}
 		break;
+#ifdef CONFIG_MOT_SENSOR_PRE_POWERUP
+	case CAM_MOT_PRE_POWER_UP: {
+		if (!s_ctrl->sensor_power_up_done)
+		{
+			rc = cam_sensor_power_up(s_ctrl);
+			if (rc < 0) {
+				CAM_ERR(CAM_SENSOR,
+					"MotPreAct - Sensor Power up failed for sensor_id:0x%x, slave_addr:0x%x",
+					s_ctrl->sensordata->slave_info.sensor_id,
+					s_ctrl->sensordata->slave_info.sensor_slave_addr);
+				goto release_mutex;
+			}
+			s_ctrl->sensor_power_up_done = 1;
+			CAM_DBG(CAM_SENSOR, "MotPreAct - Camera sensor_id:0x%x, slave_addr:0x%x, pre power on done = %d",
+				s_ctrl->sensordata->slave_info.sensor_id,
+				s_ctrl->sensordata->slave_info.sensor_slave_addr,
+				s_ctrl->sensor_power_up_done);
+		}
+	}
+		break;
+	case CAM_MOT_PRE_POWER_DOWN: {
+		if (s_ctrl->sensor_power_up_done)
+		{
+			rc = cam_sensor_power_down(s_ctrl);
+			if (rc < 0) {
+				CAM_ERR(CAM_SENSOR,
+					"Sensor Power Down failed sensor_id: 0x%x, slave_addr:0x%x",
+					s_ctrl->sensordata->slave_info.sensor_id,
+					s_ctrl->sensordata->slave_info.sensor_slave_addr);
+				goto release_mutex;
+			}
+			CAM_DBG(CAM_SENSOR, "MotPreAct - Camera sensor_id:0x%x, slave_addr:0x%x, pre power on done = %d",
+				s_ctrl->sensordata->slave_info.sensor_id,
+				s_ctrl->sensordata->slave_info.sensor_slave_addr,
+				s_ctrl->sensor_power_up_done);
+		}
+	}
+		break;
+	case CAM_MOT_QUERY_SENSOR_STATUS: {
+		uint32_t isSensorActive = 0;
+
+		if (s_ctrl->sensor_power_up_done)
+		{
+			isSensorActive = 1;
+		}
+		else
+		{
+			isSensorActive = 0;
+		}
+
+		if (copy_to_user(u64_to_user_ptr(cmd->handle),
+			&isSensorActive, sizeof(uint32_t))) {
+			CAM_ERR(CAM_SENSOR, "MotPreAct - Failed Copy to User");
+			rc = -EFAULT;
+			goto release_mutex;
+		}
+               CAM_DBG(CAM_SENSOR, "MotPreAct - Query camera sensor_id:0x%x, slave_addr:0x%x, status = %d",
+			s_ctrl->sensordata->slave_info.sensor_id,
+			s_ctrl->sensordata->slave_info.sensor_slave_addr,
+			isSensorActive);
+	}
+		break;
+#endif
 	default:
 		CAM_ERR(CAM_SENSOR, "Invalid Opcode: %d", cmd->op_code);
 		rc = -EINVAL;
@@ -1436,6 +1516,16 @@ int cam_sensor_power_up(struct cam_sensor_ctrl_t *s_ctrl)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_MOT_SENSOR_PRE_POWERUP
+	if (s_ctrl->sensor_power_up_done)
+	{
+		CAM_INFO(CAM_SENSOR, "MotPreAct - sensor has power on done for sensor_id:0x%x, slave_addr:0x%x",
+			s_ctrl->sensordata->slave_info.sensor_id,
+			s_ctrl->sensordata->slave_info.sensor_slave_addr);
+		return 0;
+	}
+#endif
+
 	power_info = &s_ctrl->sensordata->power_info;
 	slave_info = &(s_ctrl->sensordata->slave_info);
 
@@ -1510,6 +1600,9 @@ int cam_sensor_power_down(struct cam_sensor_ctrl_t *s_ctrl)
 	}
 
 	camera_io_release(&(s_ctrl->io_master_info));
+#ifdef CONFIG_MOT_SENSOR_PRE_POWERUP
+	s_ctrl->sensor_power_up_done = 0;
+#endif
 
 	return rc;
 }

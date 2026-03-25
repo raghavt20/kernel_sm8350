@@ -138,8 +138,8 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 	if (brightness > c_conn->thermal_max_brightness)
 		brightness = c_conn->thermal_max_brightness;
 
-	if(brightness && brightness < display->panel->bl_config.bl_min_level)
-		brightness = display->panel->bl_config.bl_min_level;
+	if (brightness && brightness < dsi_display->panel->bl_config.bl_min_level)
+		brightness = dsi_display->panel->bl_config.bl_min_level;
 
 	/* map UI brightness into driver backlight level with rounding */
 	bl_lvl = mult_frac(brightness, bl_max_level, brightness_max_level);
@@ -248,8 +248,11 @@ static int sde_backlight_setup(struct sde_connector *c_conn,
 	memset(&props, 0, sizeof(props));
 	props.type = BACKLIGHT_RAW;
 	props.power = FB_BLANK_UNBLANK;
-	props.max_brightness = bl_config->brightness_max_level;
-	props.brightness = bl_config->brightness_default_level;
+	props.max_brightness = brightness_max_level;
+	if (c_conn->connector_type == DRM_MODE_CONNECTOR_DSI)
+		props.brightness = dsi_bl_config->brightness_default_level;
+	else
+		props.brightness = brightness_max_level;
 	snprintf(bl_node_name, BL_NODE_NAME_SIZE, "panel%u-backlight",
 							display_count);
 	c_conn->bl_device = backlight_device_register(bl_node_name, dev->dev,
@@ -902,6 +905,49 @@ struct sde_connector_dyn_hdr_metadata *sde_connector_get_dyn_hdr_meta(
 	return &c_state->dyn_hdr_meta;
 }
 
+static bool sde_connector_is_fod_enabled(struct sde_connector *c_conn)
+{
+	struct drm_connector *connector = &c_conn->base;
+
+	if (!connector->state || !connector->state->crtc)
+		return false;
+
+	return sde_crtc_is_fod_enabled(connector->state->crtc->state);
+}
+
+struct dsi_panel *sde_connector_panel(struct sde_connector *c_conn)
+{
+	struct dsi_display *display = (struct dsi_display *)c_conn->display;
+
+	return display ? display->panel : NULL;
+}
+
+static void sde_connector_pre_update_fod_hbm(struct sde_connector *c_conn)
+{
+	struct dsi_panel *panel;
+	u32 refresh_rate;
+	bool status;
+
+	panel = sde_connector_panel(c_conn);
+	if (!panel)
+		return;
+
+	mutex_lock(&panel->panel_lock);
+	refresh_rate = panel->cur_mode->timing.refresh_rate;
+	mutex_unlock(&panel->panel_lock);
+
+	status = sde_connector_is_fod_enabled(c_conn);
+	if (status == dsi_panel_get_fod_ui(panel))
+		return;
+
+	if (status && refresh_rate >= 120)
+		sde_encoder_wait_for_event(c_conn->encoder, MSM_ENC_VBLANK);
+
+	dsi_panel_set_fod_hbm(panel, status);
+
+	dsi_panel_set_fod_ui(panel, status);
+}
+
 int sde_connector_pre_kickoff(struct drm_connector *connector)
 {
 	struct sde_connector *c_conn;
@@ -946,6 +992,9 @@ int sde_connector_pre_kickoff(struct drm_connector *connector)
 	params.hdr_meta = &c_state->hdr_meta;
 
 	SDE_EVT32_VERBOSE(connector->base.id);
+
+	if (c_conn->connector_type == DRM_MODE_CONNECTOR_DSI)
+		sde_connector_pre_update_fod_hbm(c_conn);
 
 	rc = c_conn->ops.pre_kickoff(connector, c_conn->display, &params);
 

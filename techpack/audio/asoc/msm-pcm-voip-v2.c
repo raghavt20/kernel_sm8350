@@ -373,7 +373,6 @@ static void voip_process_ul_pkt(uint8_t *voc_pkt,
 							dsp_flags);
 				return;
 			}
-
 			/* Remove the DSP frame info header. Header format:
 			 * Bits 0-3: Frame rate
 			 * Bits 4-7: Frame type
@@ -401,7 +400,6 @@ static void voip_process_ul_pkt(uint8_t *voc_pkt,
 							dsp_flags);
 				return;
 			}
-
 			/* Remove the DSP frame info header.
 			 * Header format:
 			 * Bits 0-3: frame rate

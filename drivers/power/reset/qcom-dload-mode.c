@@ -17,6 +17,24 @@
 #include <linux/qcom_scm.h>
 #include <soc/qcom/minidump.h>
 
+#define DEBUG_SYS_RESETART_WARM 1
+#define DEBUG_SYS_RESETART_PANIC 2
+static int debug_sys_restart_mode;
+
+#ifdef CONFIG_QGKI
+static int __init set_sys_restart_mode(char *str)
+{
+	if (!strcmp(str, "warm"))
+		debug_sys_restart_mode = DEBUG_SYS_RESETART_WARM;
+	else if (!strcmp(str, "panic"))
+		debug_sys_restart_mode = DEBUG_SYS_RESETART_PANIC;
+	pr_info("sys_restart_mode is set to %d\n", debug_sys_restart_mode);
+	return 1;
+}
+
+__setup("sys_restart_mode=", set_sys_restart_mode);
+#endif
+
 enum qcom_download_dest {
 	QCOM_DOWNLOAD_DEST_UNKNOWN = -1,
 	QCOM_DOWNLOAD_DEST_QPST = 0,
@@ -289,10 +307,17 @@ static int qcom_dload_restart(struct notifier_block *this, unsigned long event,
 	struct qcom_dload *poweroff = container_of(this, struct qcom_dload,
 						   restart_nb);
 
+	if (debug_sys_restart_mode == DEBUG_SYS_RESETART_PANIC) {
+		poweroff->in_panic = 1;
+		msm_enable_dump_mode(true);
+	}
 	if (!poweroff->in_panic && !poweroff->in_reboot) {
 		qcom_scm_disable_sdi();
 		set_download_mode(QCOM_DOWNLOAD_NODUMP);
 	}
+
+	if (debug_sys_restart_mode == DEBUG_SYS_RESETART_WARM)
+		reboot_mode = REBOOT_WARM;
 
 	return NOTIFY_OK;
 }

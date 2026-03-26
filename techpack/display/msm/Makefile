@@ -24,6 +24,7 @@ msm_drm-$(CONFIG_DRM_MSM_DP) += dp/dp_altmode.o \
 	dp/dp_display.o \
 	dp/dp_drm.o \
 	dp/dp_hdcp2p2.o \
+	dp/dp_stub.o \
 	sde_hdcp_1x.o \
 	sde_hdcp_2x.o \
 	dp/dp_pll.o \

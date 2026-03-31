@@ -1,6 +1,7 @@
 config MMI_INFO
         tristate "MMI INFO"
         default n
+	depends on MMI_ANNOTATE
         help
          Say Y here if you have a mmi info compatible
          device connected.

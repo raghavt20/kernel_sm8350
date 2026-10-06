@@ -409,13 +409,19 @@ static ssize_t gesture_store(struct device *dev,
 }
 static DEVICE_ATTR(gesture, (S_IWUSR | S_IWGRP | S_IRUGO), gesture_show, gesture_store);
 
+/* Single and double tap both rely on the firmware single tap gesture */
+static void tap_gesture_update(struct ts_mmi_dev *touch_cdev)
+{
+	gesture_set(touch_cdev, TS_MMI_GESTURE_SINGLE,
+		    touch_cdev->double_tap_enabled || touch_cdev->single_tap_enabled);
+}
+
 static ssize_t double_tap_enabled_show(struct device *dev,
 				       struct device_attribute *attr, char *buf)
 {
 	struct ts_mmi_dev *touch_cdev = dev_get_drvdata(dev);
 
-	return snprintf(buf, PAGE_SIZE, "%u\n",
-			!!(touch_cdev->gesture_mode_type & TS_MMI_GESTURE_SINGLE));
+	return snprintf(buf, PAGE_SIZE, "%u\n", touch_cdev->double_tap_enabled);
 }
 static ssize_t double_tap_enabled_store(struct device *dev,
 					struct device_attribute *attr,
@@ -423,7 +429,8 @@ static ssize_t double_tap_enabled_store(struct device *dev,
 {
 	struct ts_mmi_dev *touch_cdev = dev_get_drvdata(dev);
 
-	gesture_set(touch_cdev, TS_MMI_GESTURE_SINGLE, buf[0] != '0');
+	touch_cdev->double_tap_enabled = buf[0] != '0';
+	tap_gesture_update(touch_cdev);
 
 	return count;
 }
@@ -438,6 +445,37 @@ static ssize_t double_tap_pressed_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%u\n", touch_cdev->double_tap_pressed);
 }
 static DEVICE_ATTR_RO(double_tap_pressed);
+
+static ssize_t single_tap_enabled_show(struct device *dev,
+				       struct device_attribute *attr, char *buf)
+{
+	struct ts_mmi_dev *touch_cdev = dev_get_drvdata(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", touch_cdev->single_tap_enabled);
+}
+static ssize_t single_tap_enabled_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	struct ts_mmi_dev *touch_cdev = dev_get_drvdata(dev);
+
+	touch_cdev->single_tap_enabled = buf[0] != '0';
+	if (touch_cdev->single_tap_enabled)
+		touch_cdev->single_tap_pressed = false;
+	tap_gesture_update(touch_cdev);
+
+	return count;
+}
+static DEVICE_ATTR_RW(single_tap_enabled);
+
+static ssize_t single_tap_pressed_show(struct device *dev,
+				       struct device_attribute *attr, char *buf)
+{
+	struct ts_mmi_dev *touch_cdev = dev_get_drvdata(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", touch_cdev->single_tap_pressed);
+}
+static DEVICE_ATTR_RO(single_tap_pressed);
 
 static ssize_t udfps_enabled_show(struct device *dev,
 				  struct device_attribute *attr, char *buf)
@@ -554,6 +592,8 @@ static struct attribute *sysfs_class_attrs[] = {
 	&dev_attr_gesture.attr,
 	&dev_attr_double_tap_enabled.attr,
 	&dev_attr_double_tap_pressed.attr,
+	&dev_attr_single_tap_enabled.attr,
+	&dev_attr_single_tap_pressed.attr,
 	&dev_attr_udfps_enabled.attr,
 	&dev_attr_udfps_pressed.attr,
 #endif

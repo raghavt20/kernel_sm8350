@@ -209,30 +209,42 @@ static inline void update_poison_center(struct touch_event_data *tev)
 }
 #endif /* TS_MMI_TOUCH_GESTURE_POISON_EVENT */
 
-#define DOUBLE_TAP_MAX_TIME	(2 * NSEC_PER_SEC)
+/* A second tap within this window turns a single tap into a double tap */
+#define DOUBLE_TAP_WINDOW_MS	400
 
+static void ts_mmi_single_tap_work_func(struct work_struct *w)
+{
+	struct ts_mmi_dev *touch_cdev =
+		container_of(to_delayed_work(w), struct ts_mmi_dev, single_tap_work);
+
+	if (!touch_cdev->single_tap_enabled)
+		return;
+
+	touch_cdev->single_tap_pressed = true;
+	sysfs_notify(&DEV_MMI->kobj, NULL, "single_tap_pressed");
+}
+
+/*
+ * The firmware only reports single taps, so tell single and double taps apart
+ * here: report a double tap if a second tap arrives within the window, and a
+ * single tap once the window expires without one.
+ */
 static void ts_mmi_single_tap_handler(struct ts_mmi_dev *touch_cdev)
 {
-	unsigned char __maybe_unused mode_type = touch_cdev->gesture_mode_type;
-	ktime_t now, tmp;
-
-	if (!touch_cdev->single_tap_pressed) {
-		touch_cdev->single_tap_pressed_time = ktime_get_boottime();
-		touch_cdev->single_tap_pressed = true;
+	if (!touch_cdev->double_tap_enabled) {
+		/* Nothing to wait for, report the single tap right away */
+		ts_mmi_single_tap_work_func(&touch_cdev->single_tap_work.work);
 		return;
 	}
 
-	touch_cdev->single_tap_pressed = false;
-
-	now = ktime_get_boottime();
-	tmp = ktime_add(touch_cdev->single_tap_pressed_time,
-			DOUBLE_TAP_MAX_TIME);
-
-	if (ktime_after(now, tmp))
+	if (cancel_delayed_work(&touch_cdev->single_tap_work)) {
+		touch_cdev->double_tap_pressed = true;
+		sysfs_notify(&DEV_MMI->kobj, NULL, "double_tap_pressed");
 		return;
+	}
 
-	touch_cdev->double_tap_pressed = true;
-	sysfs_notify(&DEV_MMI->kobj, NULL, "double_tap_pressed");
+	schedule_delayed_work(&touch_cdev->single_tap_work,
+			      msecs_to_jiffies(DOUBLE_TAP_WINDOW_MS));
 }
 
 static int ts_mmi_gesture_handler(struct gesture_event_data *gev)
@@ -623,6 +635,7 @@ int ts_mmi_gesture_init(struct ts_mmi_dev *touch_cdev)
 		goto free_sensor_pdata;
 	}
 	events_data->touch_cdev = touch_cdev;
+	INIT_DELAYED_WORK(&touch_cdev->single_tap_work, ts_mmi_single_tap_work_func);
 
 	__set_bit(EV_KEY, sensor_input_dev->evbit);
 	__set_bit(BTN_TRIGGER_HAPPY3, sensor_input_dev->keybit);
@@ -678,6 +691,7 @@ exit:
 
 int ts_mmi_gesture_remove(struct ts_mmi_dev *touch_cdev)
 {
+	cancel_delayed_work_sync(&touch_cdev->single_tap_work);
 	sensors_classdev_unregister(&sensor_pdata->ps_cdev);
 	input_unregister_device(sensor_pdata->input_sensor_dev);
 	devm_kfree(&sensor_pdata->input_sensor_dev->dev, sensor_pdata);

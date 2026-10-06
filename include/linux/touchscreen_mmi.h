@@ -566,8 +566,10 @@ struct ts_mmi_dev {
 	struct list_head	node;
 	struct touch_clip_area clip;
 
-	ktime_t			single_tap_pressed_time;
+	struct delayed_work	single_tap_work;
+	bool			single_tap_enabled;
 	bool			single_tap_pressed;
+	bool			double_tap_enabled;
 	bool			double_tap_pressed;
 	bool			udfps_pressed;
 

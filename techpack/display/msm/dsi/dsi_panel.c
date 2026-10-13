@@ -4645,6 +4645,26 @@ static int dsi_panel_update_hbm_cmd(struct dsi_panel_cmd_set *cmd_set,
 	return 0;
 }
 
+#define LHBM_ALPHA_MAX 0x1FFF
+
+static u32 dsi_panel_get_lhbm_alpha(struct dsi_panel *panel, u32 bl_level)
+{
+	struct dsi_panel_lhbm_config *lhbm_config = &panel->lhbm_config;
+	u32 last = lhbm_config->alpha_size - 1;
+	u32 bl_max = panel->bl_config.bl_max_level;
+	u32 alpha_last = lhbm_config->alpha[last];
+
+	if (bl_level <= last)
+		return lhbm_config->alpha[bl_level];
+
+	if (bl_level >= bl_max)
+		return LHBM_ALPHA_MAX;
+
+	/* Interpolate up to the max alpha over the HBM levels */
+	return alpha_last + mult_frac(LHBM_ALPHA_MAX - alpha_last,
+				      bl_level - last, bl_max - last);
+}
+
 static int dsi_panel_set_hbm_status(struct dsi_panel *panel,
 				    bool fod_hbm_status, bool hbm_status)
 {
@@ -4676,8 +4696,7 @@ static int dsi_panel_set_hbm_status(struct dsi_panel *panel,
 		alpha_val = bl_level;
 	} else if (fod_hbm_status) {
 		type = DSI_CMD_SET_HBM_FOD_ON;
-		alpha_val = panel->lhbm_config.alpha[min(bl_level,
-					panel->lhbm_config.alpha_size - 1)];
+		alpha_val = dsi_panel_get_lhbm_alpha(panel, bl_level);
 	} else {
 		type = DSI_CMD_SET_HBM_OFF;
 		alpha_val = 0;
